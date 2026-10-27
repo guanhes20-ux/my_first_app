@@ -1,0 +1,80 @@
+[
+  {
+    "id": "rio",
+    "name": "Kia Rio",
+    "category": "Эконом",
+    "price": 2300,
+    "deposit": 10000,
+    "year": 2022,
+    "gear": "Автомат",
+    "fuel": "6,4 л",
+    "color": "#bcbfc0",
+    "plate": "УЧЕБНЫЙ-001",
+    "vin": "DEMO0000000000001"
+  },
+  {
+    "id": "solaris",
+    "name": "Hyundai Solaris",
+    "category": "Эконом",
+    "price": 2500,
+    "deposit": 10000,
+    "year": 2022,
+    "gear": "Автомат",
+    "fuel": "6,6 л",
+    "color": "#a9b9ad",
+    "plate": "УЧЕБНЫЙ-002",
+    "vin": "DEMO0000000000002"
+  },
+  {
+    "id": "k5",
+    "name": "Kia K5",
+    "category": "Комфорт",
+    "price": 4200,
+    "deposit": 20000,
+    "year": 2023,
+    "gear": "Автомат",
+    "fuel": "7,2 л",
+    "color": "#5f7272",
+    "plate": "УЧЕБНЫЙ-003",
+    "vin": "DEMO0000000000003"
+  },
+  {
+    "id": "camry",
+    "name": "Toyota Camry",
+    "category": "Бизнес",
+    "price": 5500,
+    "deposit": 25000,
+    "year": 2023,
+    "gear": "Автомат",
+    "fuel": "7,8 л",
+    "color": "#3e4649",
+    "plate": "УЧЕБНЫЙ-004",
+    "vin": "DEMO0000000000004"
+  },
+  {
+    "id": "seltos",
+    "name": "Kia Seltos",
+    "category": "Кроссовер",
+    "price": 3900,
+    "deposit": 20000,
+    "year": 2023,
+    "gear": "Автомат",
+    "fuel": "7,4 л",
+    "color": "#b49675",
+    "plate": "УЧЕБНЫЙ-005",
+    "vin": "DEMO0000000000005"
+  },
+  {
+    "id": "tugella",
+    "name": "Geely Tugella",
+    "category": "Кроссовер",
+    "price": 5900,
+    "deposit": 30000,
+    "year": 2024,
+    "gear": "Автомат",
+    "fuel": "8,1 л",
+    "color": "#657f89",
+    "plate": "УЧЕБНЫЙ-006",
+    "vin": "DEMO0000000000006"
+  }
+]
