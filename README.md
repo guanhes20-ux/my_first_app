@@ -24,7 +24,6 @@ GitHub хранит исходники. GitHub Pages не запускает Pyt
 ```bash
 git clone https://github.com/guanhes20-ux/my_first_app.git
 cd my_first_app
-git switch feat/renta-car
 python -m venv .venv
 # Linux / macOS
 source .venv/bin/activate
@@ -57,8 +56,7 @@ python -m dotenv run -- python app.py
 python -m dotenv run -- python bot.py
 ```
 
-**Токен, ранее отправленный в переписку, необходимо отозвать через BotFather (/revoke).**
-Новый токен задайте только в TELEGRAM_BOT_TOKEN в локальном .env / секретах сервера.
+Токен задайте только в TELEGRAM_BOT_TOKEN в локальном .env / секретах сервера.
 Он отсутствует в коде и истории проекта. Имя бота уже задано: Renta_Car_777_bot.
 Один токен должен обслуживаться одним процессом long polling, без активного webhook.
 Если ранее был webhook — удалите его через Bot API без публикации токена в логах.
@@ -121,3 +119,20 @@ node --check static/app.js
 - docs/LEGAL.md — юридическая подготовка и ограничения шаблона.
 
 Исходное назначение репозитория: первый учебный проект веб-разработки.
+
+## Демонстрация по ссылке (GitHub Pages)
+
+Workflow «GitHub Pages» при push в main строит каталог и публикует только папку dist.
+Ожидаемый адрес после успешной публикации: https://guanhes20-ux.github.io/my_first_app/
+
+В этой версии доступны каталог, фильтры, даты, время, расчёт стоимости и ссылка на бота.
+Бронирование не создаётся; персональные данные не собираются. Бот, анкеты, DOCX и Excel
+требуют отдельного запуска Python-сервера по инструкции выше.
+Токен бота никогда не включается в опубликованные файлы.
+
+Если публикация сообщает, что Pages не включён:
+Settings → Pages → Build and deployment → Source: GitHub Actions.
+Для приватного репозитория GitHub Pages требует подходящий платный тариф.
+На бесплатном тарифе можно сделать репозиторий публичным через Settings → General → Change visibility,
+но это откроет всем исходники и историю: меняйте видимость только осознанно.
+После изменения повторите workflow «GitHub Pages».

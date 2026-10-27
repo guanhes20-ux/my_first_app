@@ -3,6 +3,7 @@
 __pycache__/
 .pytest_cache/
 data/
+dist/
 *.sqlite*
 *.docx
 *.xlsx
