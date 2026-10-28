@@ -9,14 +9,16 @@ function render(filter='Все'){
  grid.replaceChildren();
  shown.forEach(c=>{
   const card=document.createElement('article');card.className='car-card';
-  card.innerHTML='<div class="car-picture"><span class="car-category"></span><img src="" alt=""><span class="car-year"></span></div><div class="car-body"><h3></h3><div class="car-specs"><span>◉ Автомат</span><span>♧ 5 мест</span><span class="fuel"></span></div><div class="car-bottom"><div><strong></strong><small> / сутки</small></div><button class="select-car" type="button">Выбрать ↗</button></div></div>';
-  card.querySelector('img').src=new URL('car.svg',assetRoot).href;
+  card.innerHTML='<div class="car-picture"><span class="car-category"></span><div class="car-photo" role="img"></div><span class="car-year"></span></div><div class="car-body"><h3></h3><div class="car-specs"><span>◉ Автомат</span><span>♧ 5 мест</span><span class="fuel"></span></div><div class="car-bottom"><div><strong></strong><small> / сутки</small></div><button class="select-car" type="button">Выбрать ↗</button></div></div>';
+  const photo=card.querySelector('.car-photo');
+  const photoIds=['rio','solaris','k5','camry','seltos','tugella'];
+  if(photoIds.includes(c.id)) photo.classList.add('car-photo-'+c.id);
   card.querySelector('.car-category').textContent=c.category;
   card.querySelector('.car-year').textContent=c.year;
   card.querySelector('h3').textContent=c.name;
   card.querySelector('.fuel').textContent=c.fuel+' / 100 км';
   card.querySelector('strong').textContent=money(c.price);
-  card.querySelector('img').alt='Иллюстрация '+c.name+' (условная)';
+  photo.setAttribute('aria-label','Сгенерированное изображение '+c.name);
   card.querySelector('.select-car').addEventListener('click',()=>open(c));grid.append(card);
  });
 }
