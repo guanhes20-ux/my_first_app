@@ -79,3 +79,8 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:#b74d28
 .art-caption{top:12px;left:12px;font-size:10px;padding:6px 9px}
 @media(max-width:900px){.hero-art{min-height:0;height:auto;aspect-ratio:auto;width:100%}}
 @media(max-width:600px){.hero-art{height:auto;aspect-ratio:auto;border-radius:16px}.art-caption{font-size:9px}.art-bottom{font-size:11px;bottom:10px;left:10px}}
+
+/* Larger benefit captions with wrapping on smaller screens. */
+.benefits{font-size:18px;font-weight:500;line-height:1.5;gap:20px 28px}
+.benefits>span{flex:1 1 260px}
+@media(max-width:600px){.benefits{font-size:17px}.benefits>span{flex:0 1 auto}}
