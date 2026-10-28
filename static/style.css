@@ -106,3 +106,11 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:#b74d28
 .benefit-icon-price{background:#e64e2e;color:#fff}
 @media(max-width:900px){.benefits>.benefit-item{flex:0 1 auto;width:100%}}
 @media(max-width:600px){.benefits{font-size:18px;padding:20px;gap:20px}}
+
+/* Inline icons match the caption font size. */
+.benefits .benefit-icon{display:inline-flex;flex:0 0 1em;width:1em;height:1em;min-width:1em;background:none;border-radius:0;line-height:1}
+.benefits .benefit-icon svg{display:block;width:1em;height:1em;max-width:1em;max-height:1em}
+.benefits .benefit-icon-telegram{color:#0088cc}
+.benefits .benefit-icon-clock{color:#b95a00}
+.benefits .benefit-icon-price{color:#df4329}
+.benefits>.benefit-item{align-items:baseline;gap:.6em}
