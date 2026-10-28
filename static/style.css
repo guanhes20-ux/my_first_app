@@ -70,3 +70,12 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:#b74d28
 .art-bottom{font-size:14px;left:14px;bottom:14px}
 .benefits{padding:18px;gap:12px}
 }
+
+/* Display the complete cover photograph at its natural proportions. */
+.hero-art{min-height:0;height:auto;aspect-ratio:auto;align-self:center;border-radius:24px}
+.hero-art img{position:relative;inset:auto;display:block;width:100%;height:auto;object-fit:contain;object-position:center;filter:none}
+.hero-art::after{display:none}
+.art-bottom{bottom:14px;left:14px;right:auto;max-width:calc(100% - 28px);padding:6px 10px;border-radius:8px;background:#123e43d9;color:#fff;font-size:13px}
+.art-caption{top:12px;left:12px;font-size:10px;padding:6px 9px}
+@media(max-width:900px){.hero-art{min-height:0;height:auto;aspect-ratio:auto;width:100%}}
+@media(max-width:600px){.hero-art{height:auto;aspect-ratio:auto;border-radius:16px}.art-caption{font-size:9px}.art-bottom{font-size:11px;bottom:10px;left:10px}}
