@@ -114,3 +114,6 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:#b74d28
 .benefits .benefit-icon-clock{color:#b95a00}
 .benefits .benefit-icon-price{color:#df4329}
 .benefits>.benefit-item{align-items:baseline;gap:.6em}
+
+/* Unified hero heading in the cover BMW's coral red. */
+.hero-copy h1,.hero-copy h1 em{font-family:Arial,Helvetica,sans-serif;font-style:normal;font-weight:500;color:#be4938}
