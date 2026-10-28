@@ -84,3 +84,9 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:#b74d28
 .benefits{font-size:36px;font-weight:500;line-height:1.5;gap:20px 28px}
 .benefits>span{flex:1 1 260px}
 @media(max-width:600px){.benefits{font-size:34px;overflow-wrap:anywhere}.benefits>span{flex:0 1 auto}}
+
+/* Prominent, readable benefit panel captions. */
+.benefits{font-size:40px;font-weight:600;line-height:1.35;padding:30px;gap:26px 32px;align-items:flex-start}
+.benefits>span{min-width:0;flex:1 1 300px;overflow-wrap:break-word}
+@media(max-width:900px){.benefits{flex-direction:column}.benefits>span{flex:0 1 auto;width:100%}}
+@media(max-width:600px){.benefits{font-size:36px;padding:24px 20px;overflow-wrap:break-word}}
