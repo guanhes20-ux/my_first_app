@@ -90,3 +90,8 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline-color:#b74d28
 .benefits>span{min-width:0;flex:1 1 300px;overflow-wrap:break-word}
 @media(max-width:900px){.benefits{flex-direction:column}.benefits>span{flex:0 1 auto;width:100%}}
 @media(max-width:600px){.benefits{font-size:36px;padding:24px 20px;overflow-wrap:break-word}}
+
+/* Centered green italic fleet headline. */
+#fleet>.section-top{display:block;text-align:center}
+#fleet>.section-top .eyebrow{justify-content:center}
+#fleet>.section-top h2{color:var(--green);font-style:italic;text-align:center;max-width:1100px;margin:15px auto 28px;line-height:1.3}
