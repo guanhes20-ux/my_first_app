@@ -1,0 +1,25 @@
+name: Validate Windows Telegram setup
+on:
+  push:
+    branches: [feat/neon-backend]
+    paths:
+      - 'connect-telegram-neon.ps1'
+      - '.github/workflows/validate-neon-setup.yml'
+  pull_request:
+    paths:
+      - 'connect-telegram-neon.ps1'
+      - '.github/workflows/validate-neon-setup.yml'
+permissions:
+  contents: read
+jobs:
+  parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $pwd 'connect-telegram-neon.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; exit 1 }
+          Write-Host 'Windows PowerShell parser: OK'
