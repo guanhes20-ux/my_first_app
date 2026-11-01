@@ -175,3 +175,17 @@ test('direct application links are absent outside demo mode',async()=>{
  const response=await prod.fetch(new Request(config.publicUrl+'/api/bookings',{method:'POST',headers:{cookie,Origin:config.publicUrl,'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({car_id:'rio',...dates()})}));
  const data=await response.json();assert.equal(response.status,200);assert.ok(!('application_url'in data));
 });
+
+test('privacy-preserving form navigation with Origin null can log in with valid CSRF only',async()=>{
+ const client=browser(),c=await csrf(client,'/admin/login');
+ assert.equal((await client.req('/admin/login','POST',{csrf:'bad',password:config.password},{Origin:'null'})).status,400);
+ const response=await client.req('/admin/login','POST',{csrf:c,password:config.password},{Origin:'null'});
+ assert.equal(response.status,303);
+ assert.equal((await client.req('/admin')).status,200);
+ assert.equal(response.headers.get('Referrer-Policy'),'strict-origin');
+});
+test('foreign Origin remains blocked even with a known valid CSRF token',async()=>{
+ const client=browser(),c=await csrf(client,'/admin/login');
+ assert.equal((await client.req('/admin/login','POST',{csrf:c,password:config.password},{Origin:'https://attacker.example'})).status,403);
+ assert.equal((await client.req('/admin')).status,303);
+});

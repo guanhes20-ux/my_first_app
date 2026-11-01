@@ -56,7 +56,8 @@ export function createApp({pool,config,send}){
    function csrf(provided){
     if(!equal(provided,session.csrf))throw new HttpError(400,'Обновите страницу и повторите действие.');
     const origin=request.headers.get('origin');
-    if(origin&&origin!==new URL(config.publicUrl).origin)throw new HttpError(403,'Недопустимый источник запроса.');
+    // Opaque origins can occur on privacy-preserving form navigations. The signed-session CSRF check above remains mandatory.
+    if(origin&&origin!=='null'&&origin!==new URL(config.publicUrl).origin)throw new HttpError(403,'Недопустимый источник запроса.');
    }
    async function route(){
     const method=request.method;
@@ -203,7 +204,7 @@ export function createApp({pool,config,send}){
     if(status===429)response.headers.set('Retry-After','600');
    }
    const headers=response.headers;
-   headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','no-referrer');headers.set('Cache-Control','no-store');
+   headers.set('X-Content-Type-Options','nosniff');headers.set('Referrer-Policy','strict-origin');headers.set('Cache-Control','no-store');
    headers.set('Content-Security-Policy',"default-src 'self'; img-src 'self' data: https://guanhes20-ux.github.io; style-src 'self' https://guanhes20-ux.github.io; script-src 'self' https://guanhes20-ux.github.io; form-action 'self'; frame-ancestors 'none'; base-uri 'none'");
    if(config.publicUrl.startsWith('https:'))headers.set('Strict-Transport-Security','max-age=31536000');
    if(newCookie)headers.append('Set-Cookie','renta_session='+signSession(session,config.secret)+'; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200'+(config.publicUrl.startsWith('https:')?'; Secure':''));
