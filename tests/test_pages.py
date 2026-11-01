@@ -1,4 +1,6 @@
 import json
+import re
+from urllib.parse import urlsplit
 from pathlib import Path
 from scripts.export_pages import main, OUT
 
@@ -6,7 +8,12 @@ def test_public_export_has_relative_assets_and_no_private_data():
     main()
     html=(OUT/"index.html").read_text(encoding="utf-8")
     assert 'name="static-demo"' in html
-    assert 'href="./static/style.css"' in html
+    styles = [urlsplit(href) for href in re.findall(r'<link\b[^>]*href="([^"]+)"', html)]
+    assert any(url.path == "./static/style.css" for url in styles)
+    for url in styles:
+        assert not url.scheme and not url.netloc
+        assert url.path.startswith("./static/")
+        assert (OUT / url.path).is_file()
     assert 'src="./static/app.js"' in html
     assert 'href="/' not in html
     assert 'src="/' not in html
