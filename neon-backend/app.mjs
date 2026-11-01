@@ -61,6 +61,7 @@ export function createApp({pool,config,send}){
    }
    async function route(){
     const method=request.method;
+    if(path==='/favicon.ico'&&(method==='GET'||method==='HEAD'))return new Response(null,{status:204});
     if(path==='/static/app.js'&&(method==='GET'||method==='HEAD'))return result(method==='HEAD'?null:frontend,200,'text/javascript; charset=utf-8');
     if(path.startsWith('/static/')&&(method==='GET'||method==='HEAD')){
      const relative=path.slice(8);
