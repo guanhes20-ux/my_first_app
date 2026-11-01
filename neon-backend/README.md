@@ -36,7 +36,7 @@ No database credentials, bot tokens or admin passwords are included in that outp
 Required private variables: PUBLIC_URL, APP_SECRET (32+ characters), DATA_KEY (32 random bytes as base64), ADMIN_PASSWORD (16+ characters), DEMO_MODE=true.
 Set BOT_USERNAME to the username belonging to the bot.
 To enable Telegram, additionally set TELEGRAM_BOT_TOKEN and a random TELEGRAM_WEBHOOK_SECRET of 32+ URL-safe characters.
-After deployment, run: node --env-file=.env setup-webhook.mjs
+After deployment, sign in at /admin and use the Telegram webhook button. Alternatively run: node --env-file=.env setup-webhook.mjs
 This validates getMe against BOT_USERNAME and installs the secret-protected webhook without dropping pending messages.
 Stop the old Python polling bot before enabling the webhook. Do not put its token into the repository or chat.
 

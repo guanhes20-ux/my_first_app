@@ -124,12 +124,22 @@ export function createApp({pool,config,send=telegramApi(config.botToken)}){
      if(path==='/admin/logout'&&method==='POST'){
       const form=await body();csrf(form.csrf);session={sid:token(),csrf:token(),admin:false,exp:Date.now()+7200000};newCookie=true;return redirect('/');
      }
+     if(path==='/admin/telegram/setup'&&method==='POST'){
+      const form=await body();csrf(form.csrf);
+      if(!config.botToken||!config.webhookSecret)throw new HttpError(503,'Сохраните TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET в окружении функции Neon.');
+      const me=await send('getMe',{});
+      if(me.username?.toLowerCase()!==config.bot.toLowerCase())throw new HttpError(400,'BOT_USERNAME не соответствует токену.');
+      await send('setWebhook',{url:config.publicUrl+'/telegram/webhook',secret_token:config.webhookSecret,allowed_updates:['message'],drop_pending_updates:false});
+      const info=await send('getWebhookInfo',{});
+      if(info.url!==config.publicUrl+'/telegram/webhook')throw new HttpError(502,'Не удалось проверить адрес webhook.');
+      return render('message.html',{title:'Telegram подключён',message:'Webhook настроен. Выберите автомобиль на этом сайте и продолжите оформление в Telegram. Старый Python-бот с polling должен быть остановлен.'});
+     }
      if(path==='/admin'&&method==='GET'){
       await expire(pool);
       const page=Math.max(1,Math.min(10000,Number(url.searchParams.get('page'))||1));
       const rows=(await pool.query('SELECT * FROM rental_bookings ORDER BY created DESC LIMIT 100 OFFSET $1',[(Math.floor(page)-1)*100])).rows;
       const stats=(await pool.query("SELECT count(*)::int AS total,count(DISTINCT telegram_id) FILTER(WHERE personal IS NOT NULL)::int AS clients,coalesce(sum(total) FILTER(WHERE status='confirmed'),0)::bigint AS revenue FROM rental_bookings")).rows[0];
-      return render('admin.html',{records:rows.map(decorate),...stats});
+      return render('admin.html',{records:rows.map(decorate),...stats,telegramConfigured:!!config.botToken,telegramStatus:config.botToken?'Токен задан. Остановите старый Python-бот и подключите webhook кнопкой ниже.':'Бот пока не подключён. Сохраните TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET в окружении функции Neon.'});
      }
      if(path==='/admin/report.xlsx'&&method==='GET'){
       const rows=(await pool.query('SELECT * FROM rental_bookings ORDER BY start_at LIMIT 10001')).rows;

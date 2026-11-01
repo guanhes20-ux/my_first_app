@@ -9,7 +9,7 @@ import {migrate} from '../migrate.mjs';
 const pool=new pg.Pool({connectionString:process.env.DATABASE_URL,max:10});
 const config=configuration({APP_SECRET:'test-secret-'.repeat(4),DATA_KEY:Buffer.alloc(32,7).toString('base64'),ADMIN_PASSWORD:'test-admin-password-12345',PUBLIC_URL:'https://renta.example',DEMO_MODE:'true',TELEGRAM_BOT_TOKEN:'test-token',TELEGRAM_WEBHOOK_SECRET:'test-webhook-secret-'.repeat(2)});
 let messages=[],sendFails=false;
-const app=createApp({pool,config,send:async(method,payload)=>{if(sendFails)throw Error('send failed');messages.push(payload);}});
+const app=createApp({pool,config,send:async(method,payload)=>{if(sendFails)throw Error('send failed');messages.push(payload);if(method==='getMe')return {username:config.bot};if(method==='getWebhookInfo')return {url:config.publicUrl+'/telegram/webhook'};}});
 before(async()=>migrate(pool));
 beforeEach(async()=>{await pool.query('TRUNCATE rental_bookings,rental_webhook_updates,rental_rate_limits');messages=[];sendFails=false;});
 after(async()=>pool.end());
@@ -131,4 +131,14 @@ test('login rotates CSRF and requires it for admin mutations',async()=>{
  assert.equal((await admin.req('/admin/logout','POST',{csrf:old})).status,400);
  const c=await csrf(admin,'/admin');assert.equal((await admin.req('/admin/logout','POST',{csrf:c})).status,303);
  assert.equal((await admin.req('/admin')).status,303);
+});
+
+test('admin can configure webhook without exposing the bot token',async()=>{
+ const admin=browser(),c=await login(admin);
+ const denied=await admin.req('/admin/telegram/setup','POST',{csrf:'invalid'});
+ assert.equal(denied.status,400);assert.equal(messages.length,0);
+ const response=await admin.req('/admin/telegram/setup','POST',{csrf:c});
+ assert.equal(response.status,200);const html=await response.text();assert.ok(html.includes('Telegram подключён'));assert.ok(!html.includes(config.botToken));
+ const setup=messages.find(p=>p.secret_token);
+ assert.equal(setup.url,config.publicUrl+'/telegram/webhook');assert.equal(setup.secret_token,config.webhookSecret);assert.equal(setup.drop_pending_updates,false);
 });
