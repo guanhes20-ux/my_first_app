@@ -11,7 +11,7 @@ const config=configuration({APP_SECRET:'test-secret-'.repeat(4),DATA_KEY:Buffer.
 let messages=[],sendFails=false;
 const app=createApp({pool,config,send:async(method,payload)=>{if(sendFails)throw Error('send failed');messages.push(payload);if(method==='getMe')return {username:config.bot};if(method==='getWebhookInfo')return {url:config.publicUrl+'/telegram/webhook'};}});
 before(async()=>migrate(pool));
-beforeEach(async()=>{await pool.query('TRUNCATE rental_bookings,rental_webhook_updates,rental_rate_limits');messages=[];sendFails=false;});
+beforeEach(async()=>{await pool.query('TRUNCATE rental_bookings,rental_webhook_updates,rental_rate_limits,rental_settings');messages=[];sendFails=false;});
 after(async()=>pool.end());
 function browser(){
  let cookie='';
@@ -141,4 +141,37 @@ test('admin can configure webhook without exposing the bot token',async()=>{
  assert.equal(response.status,200);const html=await response.text();assert.ok(html.includes('Telegram подключён'));assert.ok(!html.includes(config.botToken));
  const setup=messages.find(p=>p.secret_token);
  assert.equal(setup.url,config.publicUrl+'/telegram/webhook');assert.equal(setup.secret_token,config.webhookSecret);assert.equal(setup.drop_pending_updates,false);
+});
+
+test('teacher can complete booking, application and admin review without Telegram',async()=>{
+ const guest=browser(),result=await (await book(guest)).json();
+ assert.ok(result.application_url);
+ const path=new URL(result.application_url).pathname,id=ident(result);
+ const form={...personal(),csrf:await csrf(guest,path)};
+ assert.equal((await guest.req(path,'POST',form)).status,200);
+ const admin=browser(),c=await login(admin);
+ assert.equal((await admin.req('/admin/'+id+'/confirm','POST',{csrf:c})).status,303);
+ assert.equal((await admin.req('/admin/'+id+'/contract.docx')).status,200);
+ assert.equal((await admin.req('/admin/report.xlsx')).status,200);
+ const stored=(await pool.query('SELECT telegram_id,status FROM rental_bookings WHERE id=$1',[id])).rows[0];
+ assert.equal(stored.telegram_id,null);assert.equal(stored.status,'confirmed');
+ const script=await guest.req('/static/app.js');assert.equal(script.status,200);assert.match(await script.text(),/result.application_url/);
+});
+test('saved Telegram token is encrypted, never echoed, and used by the webhook',async()=>{
+ const admin=browser(),c=await login(admin),newToken='123456789:DEMO_TEST_TOKEN_NOT_REAL_123456789';
+ assert.equal((await admin.req('/admin/telegram/save','POST',{csrf:'wrong',bot_token:newToken})).status,400);
+ const response=await admin.req('/admin/telegram/save','POST',{csrf:c,bot_token:newToken});
+ assert.equal(response.status,200);assert.ok(!(await response.text()).includes(newToken));
+ const stored=(await pool.query("SELECT value FROM rental_settings WHERE key='telegram'")).rows[0].value;
+ assert.ok(!stored.includes(newToken));assert.equal(unseal(stored,config.key).token,newToken);
+ const health=await (await browser().req('/health')).json();assert.equal(health.telegramConfigured,true);
+ assert.equal((await webhook(message(50,123,'/start'))).status,200);
+});
+test('direct application links are absent outside demo mode',async()=>{
+ const production={...config,demo:false};
+ const prod=createApp({pool,config:production,send:async()=>{}});
+ const home=await prod.fetch(new Request(config.publicUrl));
+ const cookie=home.headers.get('set-cookie').split(';')[0],csrf=(await home.text()).match(/name="csrf-token" content="([^"]+)"/)[1];
+ const response=await prod.fetch(new Request(config.publicUrl+'/api/bookings',{method:'POST',headers:{cookie,Origin:config.publicUrl,'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify({car_id:'rio',...dates()})}));
+ const data=await response.json();assert.equal(response.status,200);assert.ok(!('application_url'in data));
 });

@@ -1,5 +1,5 @@
 import nunjucks from 'nunjucks';
-import {templates} from './generated.mjs';
+import {templates,frontend} from './generated.mjs';
 import {token,hash,equal,seal,unseal,signSession,readSession} from './security.mjs';
 import {HttpError,period,personalData} from './validation.mjs';
 import {transaction,expire} from './db.mjs';
@@ -11,7 +11,21 @@ class MemoryLoader extends nunjucks.Loader{
 }
 const renderer=new nunjucks.Environment(new MemoryLoader(),{autoescape:true,throwOnUndefined:false});
 const localTime=value=>new Date(+new Date(value)+7200000).toISOString().replace('Z','+02:00');
-export function createApp({pool,config,send=telegramApi(config.botToken)}){
+export function createApp({pool,config,send}){
+ const apiFor=bot=>send??telegramApi(bot.botToken);
+ async function botConfiguration(){
+  const saved=(await pool.query("SELECT value FROM rental_settings WHERE key='telegram'")).rows[0];
+  if(!saved)return config;
+  const data=unseal(saved.value,config.key);
+  return {...config,botToken:data.token,bot:data.username};
+ }
+ async function connectWebhook(bot){
+  const api=apiFor(bot),me=await api('getMe',{});
+  if(me.username?.toLowerCase()!==bot.bot.toLowerCase())throw new HttpError(400,'BOT_USERNAME не соответствует токену.');
+  await api('setWebhook',{url:config.publicUrl+'/telegram/webhook',secret_token:config.webhookSecret,allowed_updates:['message'],drop_pending_updates:false});
+  const info=await api('getWebhookInfo',{});
+  if(info.url!==config.publicUrl+'/telegram/webhook')throw new HttpError(502,'Не удалось проверить адрес webhook.');
+ }
  function decorate(row){return {...row,car:row.car_snapshot,personal:row.personal?unseal(row.personal,config.key):{},start:localTime(row.start_at),end:localTime(row.end_at),status_label:labels[row.status]};}
  async function limited(key,max){
   const row=(await pool.query("INSERT INTO rental_rate_limits(key,count,reset_at) VALUES($1,1,now()+interval '10 minutes') ON CONFLICT(key) DO UPDATE SET count=CASE WHEN rental_rate_limits.reset_at<now() THEN 1 ELSE rental_rate_limits.count+1 END,reset_at=CASE WHEN rental_rate_limits.reset_at<now() THEN now()+interval '10 minutes' ELSE rental_rate_limits.reset_at END RETURNING count",[key])).rows[0];
@@ -46,6 +60,7 @@ export function createApp({pool,config,send=telegramApi(config.botToken)}){
    }
    async function route(){
     const method=request.method;
+    if(path==='/static/app.js'&&(method==='GET'||method==='HEAD'))return result(method==='HEAD'?null:frontend,200,'text/javascript; charset=utf-8');
     if(path.startsWith('/static/')&&(method==='GET'||method==='HEAD')){
      const relative=path.slice(8);
      if(relative.includes('..'))throw new HttpError(404,'Не найдено.');
@@ -53,14 +68,17 @@ export function createApp({pool,config,send=telegramApi(config.botToken)}){
     }
     if(path==='/health'&&method==='GET'){
      await pool.query('SELECT 1');
-     return json({ok:true,service:'renta-neon-backend',demo:config.demo,telegramConfigured:!!config.botToken});
+     const bot=await botConfiguration();
+     return json({ok:true,service:'renta-neon-backend',demo:config.demo,telegramConfigured:!!bot.botToken});
     }
     if(path==='/telegram/webhook'&&method==='POST'){
-     if(!config.botToken||!config.webhookSecret)throw new HttpError(503,'Telegram ещё не настроен.');
+     if(!config.webhookSecret)throw new HttpError(503,'Telegram ещё не настроен.');
      if(!equal(request.headers.get('X-Telegram-Bot-Api-Secret-Token'),config.webhookSecret))throw new HttpError(403,'Forbidden');
      const update=await body(true);
      if(!Number.isSafeInteger(update.update_id)||update.update_id<0)throw new HttpError(400,'Invalid update');
-     await handleUpdate(pool,config,update,send);
+     const bot=await botConfiguration();
+     if(!bot.botToken)throw new HttpError(503,'Telegram ещё не настроен.');
+     await handleUpdate(pool,bot,update,apiFor(bot));
      return json({ok:true});
     }
     if(path==='/'&&method==='GET'){newCookie=true;return render('index.html');}
@@ -73,6 +91,7 @@ export function createApp({pool,config,send=telegramApi(config.botToken)}){
      await limited('booking:'+session.sid,20);
      const data=await body(true),p=period(data);
      if(typeof data.car_id!=='string')throw new HttpError(400,'Выберите автомобиль.');
+     const bot=await botConfiguration();
      const booking=await transaction(pool,async client=>{
       // Every booking for this car serializes on the same row across isolates.
       const car=(await client.query('SELECT data FROM rental_cars WHERE id=$1 FOR UPDATE',[data.car_id])).rows[0]?.data;
@@ -80,9 +99,9 @@ export function createApp({pool,config,send=telegramApi(config.botToken)}){
       await expire(client);
       const conflict=await client.query("SELECT id FROM rental_bookings WHERE car_id=$1 AND status IN ('hold','submitted','confirmed') AND start_at<$2 AND end_at>$3 LIMIT 1",[car.id,p.end,p.start]);
       if(conflict.rowCount)throw new HttpError(409,'На эти даты автомобиль уже занят. Выберите другие даты или автомобиль.');
-      const id=token(),total=p.days*car.price;
-      await client.query("INSERT INTO rental_bookings(id,car_id,car_snapshot,start_at,end_at,days,total,status,expires) VALUES($1,$2,$3,$4,$5,$6,$7,'hold',now()+interval '30 minutes')",[id,car.id,car,p.start,p.end,p.days,total]);
-      return {telegram_url:'https://t.me/'+config.bot+'?start='+id,days:p.days,total};
+      const id=token(),total=p.days*car.price,formToken=config.demo?token():null;
+      await client.query("INSERT INTO rental_bookings(id,car_id,car_snapshot,start_at,end_at,days,total,status,expires,form_token_hash,form_expires) VALUES($1,$2,$3,$4,$5,$6,$7,'hold',now()+interval '30 minutes',$8,CASE WHEN $8::text IS NULL THEN NULL ELSE now()+interval '20 minutes' END)",[id,car.id,car,p.start,p.end,p.days,total,formToken?hash(formToken):null]);
+      return {telegram_url:'https://t.me/'+bot.bot+'?start='+id,telegram_configured:!!bot.botToken,days:p.days,total,...(formToken?{application_url:config.publicUrl+'/application/'+formToken}:{})};
      });
      return json(booking);
     }
@@ -124,22 +143,32 @@ export function createApp({pool,config,send=telegramApi(config.botToken)}){
      if(path==='/admin/logout'&&method==='POST'){
       const form=await body();csrf(form.csrf);session={sid:token(),csrf:token(),admin:false,exp:Date.now()+7200000};newCookie=true;return redirect('/');
      }
+     if(path==='/admin/telegram/save'&&method==='POST'){
+      const form=await body();csrf(form.csrf);
+      await limited('telegram-setup:'+session.sid,10);
+      if(!config.webhookSecret)throw new HttpError(503,'Секрет webhook не настроен.');
+      const botToken=String(form.bot_token??'').trim();
+      if(!/^\d+:[A-Za-z0-9_-]{20,}$/.test(botToken))throw new HttpError(400,'Проверьте формат токена BotFather.');
+      const api=apiFor({...config,botToken}),me=await api('getMe',{});
+      if(!/^[A-Za-z0-9_]{5,32}$/.test(me.username??''))throw new HttpError(400,'Не удалось проверить бота.');
+      await pool.query("INSERT INTO rental_settings(key,value) VALUES('telegram',$1) ON CONFLICT(key) DO UPDATE SET value=excluded.value",[seal({token:botToken,username:me.username},config.key)]);
+      await connectWebhook({...config,botToken,bot:me.username});
+      return render('message.html',{title:'Telegram подключён',message:'Токен сохранён в зашифрованном виде, webhook включён. Остановите старый Python-бот. Заново выберите автомобиль на этом сайте и откройте Telegram.'});
+     }
      if(path==='/admin/telegram/setup'&&method==='POST'){
       const form=await body();csrf(form.csrf);
-      if(!config.botToken||!config.webhookSecret)throw new HttpError(503,'Сохраните TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET в окружении функции Neon.');
-      const me=await send('getMe',{});
-      if(me.username?.toLowerCase()!==config.bot.toLowerCase())throw new HttpError(400,'BOT_USERNAME не соответствует токену.');
-      await send('setWebhook',{url:config.publicUrl+'/telegram/webhook',secret_token:config.webhookSecret,allowed_updates:['message'],drop_pending_updates:false});
-      const info=await send('getWebhookInfo',{});
-      if(info.url!==config.publicUrl+'/telegram/webhook')throw new HttpError(502,'Не удалось проверить адрес webhook.');
+      const bot=await botConfiguration();
+      if(!bot.botToken||!config.webhookSecret)throw new HttpError(503,'Сохраните токен бота в форме Telegram.');
+      await connectWebhook(bot);
       return render('message.html',{title:'Telegram подключён',message:'Webhook настроен. Выберите автомобиль на этом сайте и продолжите оформление в Telegram. Старый Python-бот с polling должен быть остановлен.'});
      }
      if(path==='/admin'&&method==='GET'){
       await expire(pool);
+      const bot=await botConfiguration();
       const page=Math.max(1,Math.min(10000,Number(url.searchParams.get('page'))||1));
       const rows=(await pool.query('SELECT * FROM rental_bookings ORDER BY created DESC LIMIT 100 OFFSET $1',[(Math.floor(page)-1)*100])).rows;
-      const stats=(await pool.query("SELECT count(*)::int AS total,count(DISTINCT telegram_id) FILTER(WHERE personal IS NOT NULL)::int AS clients,coalesce(sum(total) FILTER(WHERE status='confirmed'),0)::bigint AS revenue FROM rental_bookings")).rows[0];
-      return render('admin.html',{records:rows.map(decorate),...stats,telegramConfigured:!!config.botToken,telegramStatus:config.botToken?'Токен задан. Остановите старый Python-бот и подключите webhook кнопкой ниже.':'Бот пока не подключён. Сохраните TELEGRAM_BOT_TOKEN и TELEGRAM_WEBHOOK_SECRET в окружении функции Neon.'});
+      const stats=(await pool.query("SELECT count(*)::int AS total,count(DISTINCT coalesce(telegram_id::text,id)) FILTER(WHERE personal IS NOT NULL)::int AS clients,coalesce(sum(total) FILTER(WHERE status='confirmed'),0)::bigint AS revenue FROM rental_bookings")).rows[0];
+      return render('admin.html',{records:rows.map(decorate),...stats,telegramConfigured:!!bot.botToken,telegramStatus:bot.botToken?'Подключён бот @'+bot.bot+'. При необходимости можно заменить токен.':'Бот пока не подключён. Вставьте токен BotFather в защищённую форму ниже. Учебная анкета доступна и без Telegram.'});
      }
      if(path==='/admin/report.xlsx'&&method==='GET'){
       const rows=(await pool.query('SELECT * FROM rental_bookings ORDER BY start_at LIMIT 10001')).rows;

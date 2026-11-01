@@ -6,7 +6,7 @@ export async function report(rows){
  sheet.views=[{state:'frozen',ySplit:1}];sheet.autoFilter='A1:J1';
  sheet.columns.forEach(c=>c.width=26);
  const summary=workbook.addWorksheet('Статистика');
- summary.addRows([['Показатель','Значение'],['Всего заявок',rows.length],['Уникальных клиентов',new Set(rows.filter(r=>r.personal.name).map(r=>r.telegram_id)).size],['Подтверждено',rows.filter(r=>r.status==='confirmed').length],['Сумма подтвержденных заявок, ₽',rows.filter(r=>r.status==='confirmed').reduce((n,r)=>n+r.total,0)],['Это сумма договоров, а не учёт фактических оплат','']]);
+ summary.addRows([['Показатель','Значение'],['Всего заявок',rows.length],['Уникальных клиентов',new Set(rows.filter(r=>r.personal.name).map(r=>r.telegram_id??r.id)).size],['Подтверждено',rows.filter(r=>r.status==='confirmed').length],['Сумма подтвержденных заявок, ₽',rows.filter(r=>r.status==='confirmed').reduce((n,r)=>n+r.total,0)],['Это сумма договоров, а не учёт фактических оплат','']]);
  const counts=new Map();for(const r of rows)counts.set(r.car.name,(counts.get(r.car.name)??0)+1);for(const row of counts)summary.addRow(row);
  return workbook.xlsx.writeBuffer();
 }

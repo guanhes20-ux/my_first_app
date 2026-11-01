@@ -32,3 +32,6 @@ CREATE TABLE IF NOT EXISTS rental_rate_limits(
  reset_at timestamptz NOT NULL
 );
 INSERT INTO rental_schema_versions(version) VALUES(1) ON CONFLICT DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS rental_settings(key text PRIMARY KEY, value text NOT NULL);
+INSERT INTO rental_schema_versions(version) VALUES(2) ON CONFLICT DO NOTHING;

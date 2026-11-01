@@ -57,3 +57,14 @@ Webhook side effects in PostgreSQL are deduplicated. A Telegram API timeout afte
 Admin dashboard shows the latest 100 records; older records can be reached with ?page=2, etc. Excel caps one export at 10,000 records.
 For retention, execute the documented purge script using the unpooled URL; confirmed/submitted records require a separate operator policy.
 No scheduled deletion, photo editor, payment system or SEO analytics was added by this migration.
+
+
+## Classroom demonstration and secure Telegram setup
+
+In DEMO_MODE=true only, the booking response contains a hashed, expiring application link so a teacher can exercise the entire browser flow without Telegram.
+No Telegram identity is fabricated. In non-demo mode that direct link is absent.
+The compiled backend serves its own frontend app.js; images and styles still come from the existing GitHub Pages assets.
+
+A signed-in administrator can paste the BotFather token into the /admin Telegram form.
+The token is validated with getMe, stored AES-GCM encrypted in rental_settings, never echoed to HTML, then used to register the secret-protected webhook.
+Database configuration overrides the environment bot token/username. Keys are never sent to the browser.
