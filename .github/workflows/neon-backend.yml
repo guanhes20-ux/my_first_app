@@ -1,0 +1,81 @@
+name: Neon backend
+on:
+  push:
+    branches: [main, feat/neon-backend]
+    paths:
+      - 'neon-backend/**'
+      - 'templates/**'
+      - 'cars.json'
+      - '.github/workflows/neon-backend.yml'
+  pull_request:
+    paths:
+      - 'neon-backend/**'
+      - 'templates/**'
+      - 'cars.json'
+      - '.github/workflows/neon-backend.yml'
+permissions:
+  contents: read
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: renta
+          POSTGRES_PASSWORD: renta
+          POSTGRES_DB: renta_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U renta -d renta_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    defaults:
+      run:
+        working-directory: neon-backend
+    env:
+      DATABASE_URL: postgres://renta:renta@localhost:5432/renta_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neon-backend-bundle
+          path: neon-backend/dist/index.mjs
+      - name: Retain deployable archive for connector-based deployment
+        if: github.event_name == 'push'
+        working-directory: .
+        run: |
+          python - <<'PY'
+          import base64, hashlib, io, json, os, pathlib, zipfile
+          output = pathlib.Path("deployment-output")
+          output.mkdir(exist_ok=True)
+          data = io.BytesIO()
+          with zipfile.ZipFile(data, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
+              archive.write("neon-backend/dist/index.mjs", "index.mjs")
+          raw = data.getvalue()
+          encoded = base64.b64encode(raw).decode()
+          paths = []
+          for number, start in enumerate(range(0, len(encoded), 160000)):
+              name = f"neon-zip-{number:03}.txt"
+              (output / name).write_text(encoded[start:start+160000], encoding="ascii")
+              paths.append(name)
+          manifest = {"source_commit": os.environ["GITHUB_SHA"], "zip_sha256": hashlib.sha256(raw).hexdigest(), "chunks": paths}
+          (output / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "build/neon-$GITHUB_RUN_ID"
+          git add deployment-output neon-backend/package-lock.json
+          git commit -m "Build tested Neon backend archive"
+          git push origin HEAD

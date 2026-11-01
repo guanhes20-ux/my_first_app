@@ -1,0 +1,10 @@
+import {configuration} from './security.mjs';
+import {telegramApi} from './telegram.mjs';
+const config=configuration(process.env);
+if(!config.botToken)throw Error('Set TELEGRAM_BOT_TOKEN in the private environment');
+if(!config.publicUrl.startsWith('https:'))throw Error('HTTPS PUBLIC_URL required');
+const api=telegramApi(config.botToken),me=await api('getMe',{});
+if(me.username?.toLowerCase()!==config.bot.toLowerCase())throw Error('BOT_USERNAME does not match this bot token');
+await api('setWebhook',{url:config.publicUrl+'/telegram/webhook',secret_token:config.webhookSecret,allowed_updates:['message'],drop_pending_updates:false});
+const info=await api('getWebhookInfo',{});
+console.log(JSON.stringify({webhookConfigured:info.url===config.publicUrl+'/telegram/webhook',pendingUpdates:info.pending_update_count}));
