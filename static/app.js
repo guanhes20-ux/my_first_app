@@ -29,6 +29,7 @@ function open(car){
  document.querySelector('#start-date').value=localDate(1);document.querySelector('#end-date').value=localDate(4);
  document.querySelector('#booking-error').textContent='';
  document.querySelector('#submit-booking').classList.remove('hidden');document.querySelector('#telegram-link').classList.add('hidden');
+ document.querySelector('#telegram-optional')?.classList.add('hidden');
  form.querySelectorAll('input').forEach(i=>i.disabled=false);
  document.querySelector('#deposit').textContent='Возвратный залог: '+money(car.deposit)+' — отдельно.';
  calculate();dialog.showModal();
@@ -56,8 +57,13 @@ form.addEventListener('submit',async e=>{
   const response=await fetch('/api/bookings',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':document.querySelector('meta[name=csrf-token]').content},body:JSON.stringify({car_id:selected.id,start,end})});
   const result=await response.json().catch(()=>({error:'Сервис временно недоступен. Обновите страницу.'}));
   if(!response.ok)throw new Error(result.error||'Не удалось оформить заявку.');
-  const link=document.querySelector('#telegram-link');link.href=result.telegram_url;link.classList.remove('hidden');btn.classList.add('hidden');form.querySelectorAll('input').forEach(i=>i.disabled=true);
-  error.textContent='Заявка сохранена. Нажмите «Открыть Telegram», затем Start / Запустить в боте.';
+  const link=document.querySelector('#telegram-link');
+  link.href=result.application_url||result.telegram_url;
+  link.textContent=result.application_url?'Заполнить учебную анкету на сайте ↗':'Открыть Telegram ↗';
+  link.classList.remove('hidden');btn.classList.add('hidden');form.querySelectorAll('input').forEach(i=>i.disabled=true);
+  const optional=document.querySelector('#telegram-optional');
+  if(optional&&result.application_url&&result.telegram_configured){optional.href=result.telegram_url;optional.classList.remove('hidden');}
+  error.textContent=result.application_url?'Учебная заявка сохранена. Откройте анкету и введите вымышленные данные.':'Заявка сохранена. Нажмите «Открыть Telegram», затем Start / Запустить в боте.';
  }catch(err){error.textContent=err.message;}finally{btn.disabled=false;}
 });
 fetch(staticDemo?new URL('cars.json',assetRoot):'/api/cars').then(r=>{if(!r.ok)throw Error();return r.json();}).then(data=>{cars=data;render();}).catch(()=>{grid.textContent='Не удалось загрузить автомобили. Обновите страницу.';});

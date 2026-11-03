@@ -1,0 +1,20 @@
+name: Neon backend live verification
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/neon-backend]
+    paths:
+      - 'neon-backend/live_check.py'
+      - '.github/workflows/neon-backend-live.yml'
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python neon-backend/live_check.py

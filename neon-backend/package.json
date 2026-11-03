@@ -1,0 +1,25 @@
+{
+  "name": "renta-neon-backend",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "node prepare.mjs",
+    "test": "node --test --test-concurrency=1",
+    "build": "node build.mjs",
+    "migrate": "node migrate.mjs"
+  },
+  "dependencies": {
+    "@neon/functions": "latest",
+    "pg": "^8.16.3",
+    "nunjucks": "3.2.4",
+    "docx": "^9.5.1",
+    "exceljs": "4.4.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "jszip": "3.10.1"
+  }
+}
